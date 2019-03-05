@@ -148,6 +148,23 @@ objects:
       type: Generic
     - type: ConfigChange
 - apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: jenkins-ephemeral
+    name: jenkins
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    host: ${NAME_PREFIX}-${PROJECT_NAME}.apps.oslab.elostech.cz
+    tls:
+      insecureEdgeTerminationPolicy: Redirect
+      termination: edge
+    to:
+      kind: Service
+      name: jenkins
+      weight: 100
+    wildcardPolicy: None
+- apiVersion: v1
   kind: BuildConfig
   metadata:
     labels:
