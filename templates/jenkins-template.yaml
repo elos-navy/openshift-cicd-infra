@@ -195,7 +195,7 @@ objects:
               }
             """
           }
-   type: JenkinsPipeline
+  type: JenkinsPipeline
 parameters:
 - name: NAME_PREFIX
   value: cicd

@@ -164,6 +164,5 @@ objects:
         from:
           kind: ImageStreamTag
           name: sonarqube:6.7.4
-          namespace: xyz-sonarqube
         lastTriggeredImage: wkulhanek/sonarqube
       type: ImageChange

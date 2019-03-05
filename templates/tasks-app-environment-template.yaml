@@ -216,7 +216,7 @@ objects:
           deploymentconfig: tasks
       spec:
         containers:
-        - image: xyz-tasks-dev/tasks:0.0-0
+        - image: ${NAME_PREFIX}-${PROJECT_NAME}/tasks:0.0-0
           imagePullPolicy: IfNotPresent
           name: tasks
           resources: {}
