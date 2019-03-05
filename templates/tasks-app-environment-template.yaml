@@ -1,0 +1,274 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: tasks-app-environment
+metadata:
+  annotations:
+    description: CI/CD Tasks application environment template.
+    iconClass: icon-jenkins
+    tags: tasks-app-environment
+  name: tasks-app-environment
+objects:
+- apiVersion: project.openshift.io/v1
+  kind: Project
+  metadata:
+    annotations:
+      openshift.io/description: ${PROJECT_DESCRIPTION}
+      openshift.io/display-name: ${PROJECT_DISPLAYNAME}
+    name: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec: {}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    annotations:
+      openshift.io/description: Allows all pods in this namespace to pull images from
+        this namespace.  It is auto-managed by a controller; remove subjects to disable.
+    name: system:image-pullers
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: system:image-puller
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:${NAME_PREFIX}-${PROJECT_NAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    annotations:
+      openshift.io/description: Allows builds in this namespace to push images to
+        this namespace.  It is auto-managed by a controller; remove subjects to disable.
+    name: system:image-builders
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: system:image-builder
+  subjects:
+  - kind: ServiceAccount
+    name: builder
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    annotations:
+      openshift.io/description: Allows deploymentconfigs in this namespace to rollout
+        pods in this namespace.  It is auto-managed by a controller; remove subjects
+        to disable.
+    name: system:deployers
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: system:deployer
+  subjects:
+  - kind: ServiceAccount
+    name: deployer
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: admin
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: admin
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ${PROJECT_ADMIN_USER}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: edit4jenkins
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: ServiceAccount
+    name: system:serviceaccount:${NAME_PREFIX}-jenkins:default
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      build: tasks
+    name: tasks
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    lookupPolicy:
+      local: false
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      build: tasks
+    name: wildfly
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - from:
+        kind: DockerImage
+        name: jboss/wildfly:latest
+      generation: 2
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  data:
+    application-roles.properties: Placeholder
+    application-users.properties: Placeholder
+  kind: ConfigMap
+  metadata:
+    name: tasks-config
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: tasks
+    name: tasks
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: tasks
+      deploymentconfig: tasks
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      build: tasks
+    name: tasks
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    failedBuildsHistoryLimit: 5
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: tasks:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      binary: {}
+      dockerfile: |-
+        FROM jboss/wildfly
+        ADD tasks-*.war /opt/jboss/wildfly/standalone/deployments/
+      type: Binary
+    strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: wildfly:latest
+      type: Docker
+    successfulBuildsHistoryLimit: 5
+    triggers:
+    - github:
+        secret: j-e5XFSI6cpp8b3uIziI
+      type: GitHub
+    - generic:
+        secret: Q2aswlBmY0pM8R02jr1f
+      type: Generic
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: tasks
+    name: tasks
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: tasks
+      deploymentconfig: tasks
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: tasks
+          deploymentconfig: tasks
+      spec:
+        containers:
+        - image: xyz-tasks-dev/tasks:0.0-0
+          imagePullPolicy: IfNotPresent
+          name: tasks
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /opt/jboss/wildfly/standalone/configuration/application-users.properties
+            name: jboss-config
+            subPath: application-users.properties
+          - mountPath: /opt/jboss/wildfly/standalone/configuration/application-roles.properties
+            name: jboss-config1
+            subPath: application-roles.properties
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: tasks-config
+          name: jboss-config
+        - configMap:
+            defaultMode: 420
+            name: tasks-config
+          name: jboss-config1
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: tasks
+    name: tasks
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    host: ${NAME_PREFIX}-${PROJECT_NAME}.apps.oslab.elostech.cz
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: tasks
+      weight: 100
+    wildcardPolicy: None
+parameters:
+- name: NAME_PREFIX
+  value: cicd
+- name: PROJECT_NAME
+  value: tasks
+- name: PROJECT_DISPLAYNAME
+  value: CI/CD Tasks App
+- name: PROJECT_DESCRIPTION
+  value: CI/CD Tasks App
+- name: PROJECT_ADMIN_USER
+  value: admin
