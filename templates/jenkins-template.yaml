@@ -177,25 +177,35 @@ objects:
         jenkinsfile: |-
           #!groovy
           
-          def source_git_repo = 'https://github.com/pradels/openshift-cicd-infra.git'
-          def name_prefix = 'cicd'
+          def source_git_repo    = 'https://github.com/pradels/openshift-cicd-infra.git'
+          def name_prefix        = 'cicd'
+          def components_project = "${name_prefix}-components"
           
-          node {
+          pipeline {
             stage('Cleanup') {
-              delete_project("${name_prefix}-gogs")
-              delete_project("${name_prefix}-nexus")
-              delete_project("${name_prefix}-sonarqube")
-              delete_project("${name_prefix}-app")
+              delete_project(components_project)
             }
-
+            
             stage('Checkout Source') {
               git source_git_repo
             }
-  
-            stage('Create Gogs') {
+          
+            stage('Create Components Prerequisites') {
+              openshift.withCluster() {
+                openshift.newApp('./templates/components-project-template.yaml')
+              }
             }
-
+          
+            stage('Create Gogs') {
+              echo 'Creating Gogs...'
+            }
+          
             stage('Create Nexus') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('./templates/jenkins-template.yaml')
+                }
+              }
             }
             
             stage('Create Sonarqube') {
@@ -210,8 +220,10 @@ objects:
               oc get projects | grep $project_name && {
                 oc delete project/$project_name
               }
+              echo
             """
           }
+
   type: JenkinsPipeline
 parameters:
 - name: NAME_PREFIX
