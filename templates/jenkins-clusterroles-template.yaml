@@ -10,27 +10,11 @@ metadata:
   name: jenkins-clusterroles
 objects:
 - apiVersion: v1
-  kind: ClusterRole
-  metadata:
-    name: project-management
-  rules:
-  - apiGroups:
-    - project.openshift.io
-    attributeRestrictions: null
-    resources:
-    - projects
-    verbs:
-    - create
-    - delete
-    - get
-    - patch
-    - update
-- apiVersion: v1
   kind: ClusterRoleBinding
   metadata:
-    name: jenkins-cluster-project-management
+    name: jenkins-cluster-admin
   roleRef:
-    name: project-management
+    name: cluster-admin
   subjects:
   - kind: ServiceAccount
     name: jenkins
