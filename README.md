@@ -7,22 +7,21 @@ Po naklonovani tohoto repa je nutne mat dostupny OpenShift cluster cez prikaz `o
 ### Vytvorenie roli pre Jenkins service account
 
 ```
-oc process -f template/jenkins-clusterroles-template.yaml
+oc process -f templates/jenkins-clusterroles-template.yaml | oc create -f -
 ```
 
 ### Vytvorenie Jenkins projektu a serveru
 
 ```
 oc delete project cicd-jenkins
-oc new-app -f templates/jenkins-template.yaml
+oc process -f templates/jenkins-template.yaml | oc create -f -
 ```
-
 
 ### Spustenie pipeline pre build CI/CD komponent
 
 Nasledne, az je Jenkins POD dostupny je mozne spustit build pipeline pre vytvorenie dalsich infra komponent.
 
-Napriklad:
+Napriklad z CLI:
 
 ```
 oc start-build bc/pipeline -n cicd-jenkins
