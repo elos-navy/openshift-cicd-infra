@@ -201,11 +201,11 @@ objects:
             }
           
             stage('Create Nexus') {
-              openshift.withCluster() {
-                openshift.withProject(components_project) {
-                  openshift.newApp('./templates/jenkins-template.yaml')
-                }
-              }
+              //openshift.withCluster() {
+              //  openshift.withProject(components_project) {
+              //    openshift.newApp('./templates/nexus-template.yaml')
+              //  }
+              //}
             }
             
             stage('Create Sonarqube') {

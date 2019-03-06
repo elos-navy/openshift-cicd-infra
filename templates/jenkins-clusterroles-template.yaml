@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: jenkins-clusterroles
+metadata:
+  annotations:
+    description: Cluster roles and bindings for jenkins CI/CD serviceaccount.
+    iconClass: icon-jenkins
+    tags: jenkins-clusterroles
+  name: jenkins-clusterroles
+objects:
+- apiVersion: v1
+  kind: ClusterRole
+  metadata:
+    name: project-management
+  rules:
+  - apiGroups:
+    - project.openshift.io
+    attributeRestrictions: null
+    resources:
+    - projects
+    verbs:
+    - create
+    - delete
+    - get
+    - patch
+    - update
+- apiVersion: v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: jenkins-cluster-project-management
+  roleRef:
+    name: project-management
+  subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: ${NAME_PREFIX}-jenkins
+  userNames:
+  - system:serviceaccount:${NAME_PREFIX}-jenkins:jenkins
+parameters:
+- name: NAME_PREFIX
+  value: cicd
