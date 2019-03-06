@@ -90,8 +90,10 @@ objects:
     name: edit
   subjects:
   - kind: ServiceAccount
-    name: system:serviceaccount:${NAME_PREFIX}-jenkins:default
+    name: jenkins
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  userNames:
+  - system:serviceaccount:${NAME_PREFIX}-jenkins:jenkins
 - apiVersion: v1
   kind: ImageStream
   metadata:
