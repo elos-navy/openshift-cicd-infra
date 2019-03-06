@@ -155,7 +155,7 @@ objects:
     name: jenkins
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
-    host: ${NAME_PREFIX}-${PROJECT_NAME}.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-jenkins.apps.oslab.elostech.cz
     tls:
       insecureEdgeTerminationPolicy: Redirect
       termination: edge
@@ -180,10 +180,12 @@ objects:
           def source_git_repo    = 'https://github.com/pradels/openshift-cicd-infra.git'
           def name_prefix        = 'cicd'
           def components_project = "${name_prefix}-components"
+          def app_project        = "${name_prefix}-tasks"
           
-          pipeline {
+          node {
             stage('Cleanup') {
               delete_project(components_project)
+              delete_project(app_project)
             }
             
             stage('Checkout Source') {
@@ -191,36 +193,48 @@ objects:
             }
           
             stage('Create Components Prerequisites') {
-              openshift.withCluster() {
-                openshift.newApp('./templates/components-project-template.yaml')
-              }
+              sh 'oc process -f templates/components-project-template.yaml | oc create -f -'
             }
           
             stage('Create Gogs') {
-              echo 'Creating Gogs...'
             }
           
             stage('Create Nexus') {
-              //openshift.withCluster() {
-              //  openshift.withProject(components_project) {
-              //    openshift.newApp('./templates/nexus-template.yaml')
-              //  }
-              //}
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('./templates/nexus-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}")
+                }
+              }
             }
             
             stage('Create Sonarqube') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('postgresql-persistent',
+                    '--param POSTGRESQL_USER=sonar',
+                    '--param POSTGRESQL_PASSWORD=sonar',
+                    '--param POSTGRESQL_DATABASE=sonar',
+                    '--param VOLUME_CAPACITY=4Gi',
+                    '--labels=app=sonarqube_db')
+                  
+                  openshift.newApp('./templates/sonarqube-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}")
+                }
+              }
             }
-            
+          
             stage('Prepare application environment') {
+              sh """
+                oc process -f templates/tasks-app-environment-template.yaml \
+                  -p NAME_PREFIX=${name_prefix} | oc create -f -
+              """
             }
           }
           
           def delete_project(project_name) {
             sh """
-              oc get projects | grep $project_name && {
-                oc delete project/$project_name
-              }
-              echo
+              oc delete project $project_name || echo
             """
           }
 

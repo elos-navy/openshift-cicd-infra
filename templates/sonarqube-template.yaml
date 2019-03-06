@@ -51,7 +51,7 @@ objects:
       app: sonarqube
     name: sonarqube
   spec:
-    host: sonarqube.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-sonarqube.apps.oslab.elostech.cz
     port:
       targetPort: 9000-tcp
     to:
@@ -166,3 +166,6 @@ objects:
           name: sonarqube:6.7.4
         lastTriggeredImage: wkulhanek/sonarqube
       type: ImageChange
+parameters:
+- name: NAME_PREFIX
+  value: cicd
