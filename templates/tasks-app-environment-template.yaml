@@ -255,7 +255,7 @@ objects:
     name: tasks
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
-    host: ${NAME_PREFIX}-${PROJECT_NAME}.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-${PROJECT_NAME}.${APP_DOMAIN}
     port:
       targetPort: 8080
     to:
@@ -266,6 +266,8 @@ objects:
 parameters:
 - name: NAME_PREFIX
   value: cicd
+- name: APP_DOMAIN
+  value: apps.oslab.elostech.cz
 - name: PROJECT_NAME
   value: tasks
 - name: PROJECT_DISPLAYNAME

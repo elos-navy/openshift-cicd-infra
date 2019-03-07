@@ -155,7 +155,7 @@ objects:
     name: jenkins
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
-    host: ${NAME_PREFIX}-jenkins.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-jenkins.${APP_DOMAIN}
     tls:
       insecureEdgeTerminationPolicy: Redirect
       termination: edge
@@ -179,6 +179,7 @@ objects:
           
           def source_git_repo    = 'https://github.com/pradels/openshift-cicd-infra.git'
           def name_prefix        = 'cicd'
+          def app_domain         = 'apps.oslab.elostech.cz'
           def components_project = "${name_prefix}-components"
           def app_project        = "${name_prefix}-tasks"
           
@@ -197,13 +198,29 @@ objects:
             }
           
             stage('Create Gogs') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('postgresql-persistent',
+                    '--param POSTGRESQL_USER=gogs',
+                    '--param POSTGRESQL_PASSWORD=gogs',
+                    '--param POSTGRESQL_DATABASE=gogs',
+                    '--param VOLUME_CAPACITY=4Gi',
+                    '--param DATABASE_SERVICE_NAME=postgresql-gogs',
+                    '--labels=app=postgresql_gogs')
+                    
+                  openshift.newApp('./templates/gogs-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
+                }
+              }
             }
           
             stage('Create Nexus') {
               openshift.withCluster() {
                 openshift.withProject(components_project) {
                   openshift.newApp('./templates/nexus-template.yaml',
-                    "--param NAME_PREFIX=${name_prefix}")
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
                 }
               }
             }
@@ -216,10 +233,12 @@ objects:
                     '--param POSTGRESQL_PASSWORD=sonar',
                     '--param POSTGRESQL_DATABASE=sonar',
                     '--param VOLUME_CAPACITY=4Gi',
+                    '--param DATABASE_SERVICE_NAME=postgresql-sonarqube',
                     '--labels=app=sonarqube_db')
                   
                   openshift.newApp('./templates/sonarqube-template.yaml',
-                    "--param NAME_PREFIX=${name_prefix}")
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
                 }
               }
             }
@@ -227,7 +246,8 @@ objects:
             stage('Prepare application environment') {
               sh """
                 oc process -f templates/tasks-app-environment-template.yaml \
-                  -p NAME_PREFIX=${name_prefix} | oc create -f -
+                  -p NAME_PREFIX=${name_prefix} \
+                  -p APP_DOMAIN=${app_domain}| oc create -f -
               """
             }
           }
@@ -242,6 +262,8 @@ objects:
 parameters:
 - name: NAME_PREFIX
   value: cicd
+- name: APP_DOMAIN
+  value: apps.oslab.elostech.cz
 - name: PROJECT_NAME
   value: jenkins
 - name: PROJECT_DISPLAYNAME

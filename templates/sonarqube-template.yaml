@@ -51,7 +51,7 @@ objects:
       app: sonarqube
     name: sonarqube
   spec:
-    host: ${NAME_PREFIX}-sonarqube.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-sonarqube.${APP_DOMAIN}
     port:
       targetPort: 9000-tcp
     to:
@@ -104,7 +104,7 @@ objects:
           - name: SONARQUBE_JDBC_PASSWORD
             value: sonar
           - name: SONARQUBE_JDBC_URL
-            value: jdbc:postgresql://postgresql/sonar
+            value: jdbc:postgresql://postgresql-sonarqube/sonar
           - name: SONARQUBE_JDBC_USERNAME
             value: sonar
           image: wkulhanek/sonarqube
@@ -169,3 +169,5 @@ objects:
 parameters:
 - name: NAME_PREFIX
   value: cicd
+- name: APP_DOMAIN
+  value: apps.oslab.elostech.cz

@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: gogs
+metadata:
+  annotations:
+    description: Gogs GIT server CI/CD component.
+    iconClass: icon-git
+    tags: gogs
+  name: gogs
+objects:
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    labels:
+      app: gogs
+    name: gogs
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: wkulhanek/gogs:11.34
+      from:
+        kind: DockerImage
+        name: wkulhanek/gogs:11.34
+      generation: 2
+      importPolicy: {}
+      name: "11.34"
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: gogs
+    name: gogs
+  spec:
+    ports:
+    - name: 3000-tcp
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+    selector:
+      app: gogs
+      deploymentconfig: gogs
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: gogs-data
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+    volumeName: pv0005
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: gogs
+    name: gogs
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: gogs
+      deploymentconfig: gogs
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: gogs
+          deploymentconfig: gogs
+      spec:
+        containers:
+        - image: wkulhanek/gogs
+          imagePullPolicy: IfNotPresent
+          name: gogs
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /data
+            name: gogs-volume-1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: gogs-volume-1
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - gogs
+        from:
+          kind: ImageStreamTag
+          name: gogs:11.34
+      type: ImageChange
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    labels:
+      app: gogs
+    name: gogs
+  spec:
+    host: ${NAME_PREFIX}-gogs.${APP_DOMAIN}
+    port:
+      targetPort: 3000-tcp
+    to:
+      kind: Service
+      name: gogs
+      weight: 100
+    wildcardPolicy: None
+parameters:
+- name: NAME_PREFIX
+  value: cicd
+- name: APP_DOMAIN
+  value: apps.oslab.elostech.cz

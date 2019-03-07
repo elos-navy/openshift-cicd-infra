@@ -67,7 +67,7 @@ objects:
       app: nexus3
     name: nexus3
   spec:
-    host: ${NAME_PREFIX}-nexus3.apps.oslab.elostech.cz
+    host: ${NAME_PREFIX}-nexus3.${APP_DOMAIN}
     port:
       targetPort: 8081-tcp
     to:
@@ -194,3 +194,5 @@ objects:
 parameters:
 - name: NAME_PREFIX
   value: cicd
+- name: APP_DOMAIN
+  value: apps.oslab.elostech.cz
