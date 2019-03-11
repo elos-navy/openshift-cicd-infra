@@ -207,6 +207,11 @@ objects:
                     '--param VOLUME_CAPACITY=4Gi',
                     '--param DATABASE_SERVICE_NAME=postgresql-gogs',
                     '--labels=app=postgresql_gogs')
+
+                  sh """
+                    sed -i 's/_GOGS_ROOT_URL_/http\:\/\/${name_prefix}.${app_domain}/' artefacts/gogs-app.ini
+                    oc create configmap gogs-app-ini --from-file=artefacts/gogs-app.ini
+                  """
                     
                   openshift.newApp('./templates/gogs-template.yaml',
                     "--param NAME_PREFIX=${name_prefix}",
