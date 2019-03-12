@@ -218,7 +218,8 @@ objects:
           
                   sh """
                     sed -i 's@_GOGS_ROOT_URL_@http://${name_prefix}.${app_domain}@' artefacts/gogs-app.ini
-                    oc create configmap gogs-app-ini --from-file=artefacts/gogs-app.ini
+                    cp artefacts/gogs-app.ini artefacts/app.ini
+                    oc create configmap gogs-app-ini --from-file=artefacts/app.ini
                   """
                     
                   openshift.newApp('./templates/gogs-template.yaml',
@@ -241,6 +242,12 @@ objects:
                   openshift.newApp('./templates/nexus-template.yaml',
                     "--param NAME_PREFIX=${name_prefix}",
                     "--param APP_DOMAIN=${app_domain}")
+                    
+                  wait_for_pod('nexus')
+                  
+                  def nexus_pod_name = get_pod_name('nexus')
+                  sh "oc rsync artefacts ${nexus_pod_name}:/tmp/"
+                  sh "oc exec ${nexus_pod_name} -- /tmp/artefacts/setup_nexus3.sh admin admin123 http://localhost:8081"
                 }
               }
             }
@@ -296,6 +303,7 @@ objects:
               """
             }
           }
+
 
   type: JenkinsPipeline
 parameters:
