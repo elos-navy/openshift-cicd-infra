@@ -194,7 +194,15 @@ objects:
             }
           
             stage('Create Components Prerequisites') {
+              // Change current project to default - existing project. If pipeline is executed
+              // multiple times, oc can be still switched to old and non-existing project for
+              // components.
+              sh 'oc project default'
               sh 'oc process -f templates/components-project-template.yaml | oc create -f -'
+              
+              // Switch to components project if it exists. This is done for all oc commands
+              // executed directly later in this pipeline.
+              sh "oc project ${components_project}"
             }
           
             stage('Create Gogs') {
@@ -207,15 +215,22 @@ objects:
                     '--param VOLUME_CAPACITY=4Gi',
                     '--param DATABASE_SERVICE_NAME=postgresql-gogs',
                     '--labels=app=postgresql_gogs')
-
+          
                   sh """
-                    sed -i 's/_GOGS_ROOT_URL_/http\:\/\/${name_prefix}.${app_domain}/' artefacts/gogs-app.ini
+                    sed -i 's@_GOGS_ROOT_URL_@http://${name_prefix}.${app_domain}@' artefacts/gogs-app.ini
                     oc create configmap gogs-app-ini --from-file=artefacts/gogs-app.ini
                   """
                     
                   openshift.newApp('./templates/gogs-template.yaml',
                     "--param NAME_PREFIX=${name_prefix}",
                     "--param APP_DOMAIN=${app_domain}")
+                  
+                  wait_for_pod('postgresql-gogs')
+                  wait_for_pod('gogs')
+                  
+                  def gogs_pod_name = get_pod_name('gogs')
+                  sh "oc rsync artefacts ${gogs_pod_name}:/tmp/"
+                  sh "oc exec ${gogs_pod_name} -- /opt/gogs/gogs restore --from=/tmp/artefacts/gogs-backup.zip"
                 }
               }
             }
@@ -261,6 +276,25 @@ objects:
             sh """
               oc delete project $project_name || echo
             """
+          }
+          
+          def get_pod_name(app_name) {
+            return sh (
+              script: "oc get pod | grep '^$app_name' | awk '{ print \$1 }'",
+              returnStdout: true
+            ).trim()
+          }
+          
+          def wait_for_pod(app_name) {
+            timeout(5) {
+              sh """
+                while true; do
+                  PODS_COUNT=\$(oc get rc | grep "^$app_name" | awk '{ print \$4 }')
+                  [ "\$PODS_COUNT" -ge 1 ] && break
+                  sleep 10
+                done
+              """
+            }
           }
 
   type: JenkinsPipeline
