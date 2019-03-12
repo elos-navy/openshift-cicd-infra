@@ -177,16 +177,20 @@ objects:
         jenkinsfile: |-
           #!groovy
           
-          def source_git_repo    = 'https://github.com/pradels/openshift-cicd-infra.git'
+          def source_git_repo       = 'https://github.com/elos-tech/openshift-cicd-infra.git'
+          def app_pipeline_git_repo = 'https://github.com/elos-tech/openshift-cicd-app.git'
           def name_prefix        = 'cicd'
           def app_domain         = 'apps.oslab.elostech.cz'
+          def jenkins_project    = "${name_prefix}-jenkins"
           def components_project = "${name_prefix}-components"
-          def app_project        = "${name_prefix}-tasks"
+          def app_project_dev    = "${name_prefix}-tasks-dev"
+          def app_project_prod   = "${name_prefix}-tasks-prod"
           
           node {
             stage('Cleanup') {
               delete_project(components_project)
-              delete_project(app_project)
+              delete_project(app_project_dev)
+              delete_project(app_project_prod)
             }
             
             stage('Checkout Source') {
@@ -270,12 +274,33 @@ objects:
               }
             }
           
-            stage('Prepare application environment') {
+            stage('Prepare dev application environment') {
               sh """
                 oc process -f templates/tasks-app-environment-template.yaml \
                   -p NAME_PREFIX=${name_prefix} \
+                  -p PROJECT_NAME=tasks-dev \
                   -p APP_DOMAIN=${app_domain}| oc create -f -
               """
+            }
+            
+            stage('Prepare prod application environment') {
+              sh """
+                oc process -f templates/tasks-app-environment-template.yaml \
+                  -p NAME_PREFIX=${name_prefix} \
+                  -p PROJECT_NAME=tasks-prod \
+                  -p APP_DOMAIN=${app_domain}| oc create -f -
+              """
+            }
+            
+            stage('Create application pipeline') {
+              openshift.withCluster() {
+                openshift.withProject(jenkins_project) {
+                  sh """
+                    oc get bc | grep '^openshift-cicd-app' || oc new-app ${app_pipeline_git_repo}
+                  """
+                  //openshift.newApp(app_pipeline_git_repo)
+                }
+              }
             }
           }
           
@@ -303,7 +328,6 @@ objects:
               """
             }
           }
-
 
   type: JenkinsPipeline
 parameters:
