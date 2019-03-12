@@ -209,6 +209,7 @@ objects:
               sh "oc project ${components_project}"
             }
           
+            /*
             stage('Create Gogs') {
               openshift.withCluster() {
                 openshift.withProject(components_project) {
@@ -239,6 +240,7 @@ objects:
                 }
               }
             }
+            */
           
             stage('Create Nexus') {
               openshift.withCluster() {
