@@ -1,0 +1,186 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: jenkins-infra-pipeline
+metadata:
+  annotations:
+    description: CI/CD Jenkins component with pipeline for creating infra tools.
+    iconClass: icon-jenkins
+    tags: jenkins
+  name: jenkins-infra-pipeline
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: infra-pipeline
+    name: infra-pipeline
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  spec:
+    strategy:
+      jenkinsPipelineStrategy:
+        jenkinsfile: |-
+          #!groovy
+          
+          def source_git_repo       = 'https://github.com/elos-tech/openshift-cicd-infra.git'
+          def app_pipeline_git_repo = 'https://github.com/elos-tech/openshift-cicd-app.git'
+          def name_prefix        = 'cicd'
+          def app_domain         = 'apps.oslab.elostech.cz'
+          def jenkins_project    = "${name_prefix}-jenkins"
+          def components_project = "${name_prefix}-components"
+          def app_project_dev    = "${name_prefix}-tasks-dev"
+          def app_project_prod   = "${name_prefix}-tasks-prod"
+          
+          node {
+            stage('Cleanup') {
+              delete_project(components_project)
+              delete_project(app_project_dev)
+              delete_project(app_project_prod)
+            }
+            
+            stage('Checkout Source') {
+              git source_git_repo
+            }
+          
+            stage('Create Components Prerequisites') {
+              // Change current project to default - existing project. If pipeline is executed
+              // multiple times, oc can be still switched to old and non-existing project for
+              // components.
+              sh 'oc project default'
+              sh 'oc process -f templates/components-project-template.yaml | oc create -f -'
+              
+              // Switch to components project if it exists. This is done for all oc commands
+              // executed directly later in this pipeline.
+              sh "oc project ${components_project}"
+            }
+          
+            /*
+            stage('Create Gogs') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('postgresql-persistent',
+                    '--param POSTGRESQL_USER=gogs',
+                    '--param POSTGRESQL_PASSWORD=gogs',
+                    '--param POSTGRESQL_DATABASE=gogs',
+                    '--param VOLUME_CAPACITY=4Gi',
+                    '--param DATABASE_SERVICE_NAME=postgresql-gogs',
+                    '--labels=app=postgresql_gogs')
+          
+                  sh """
+                    sed -i 's@_GOGS_ROOT_URL_@http://${name_prefix}.${app_domain}@' artefacts/gogs-app.ini
+                    cp artefacts/gogs-app.ini artefacts/app.ini
+                    oc create configmap gogs-app-ini --from-file=artefacts/app.ini
+                  """
+                    
+                  openshift.newApp('./templates/gogs-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
+                  
+                  wait_for_pod('postgresql-gogs')
+                  wait_for_pod('gogs')
+                  
+                  def gogs_pod_name = get_pod_name('gogs')
+                  sh "oc rsync artefacts ${gogs_pod_name}:/tmp/"
+                  sh "oc exec ${gogs_pod_name} -- /opt/gogs/gogs restore --from=/tmp/artefacts/gogs-backup.zip"
+                }
+              }
+            }
+            */
+          
+            stage('Create Nexus') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('./templates/nexus-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
+                    
+                  wait_for_pod('nexus')
+                  
+                  def nexus_pod_name = get_pod_name('nexus')
+                  sh "oc rsync artefacts ${nexus_pod_name}:/tmp/"
+                  sh "oc exec ${nexus_pod_name} -- /tmp/artefacts/setup_nexus3.sh admin admin123 http://localhost:8081"
+                }
+              }
+            }
+            
+            stage('Create Sonarqube') {
+              openshift.withCluster() {
+                openshift.withProject(components_project) {
+                  openshift.newApp('postgresql-persistent',
+                    '--param POSTGRESQL_USER=sonar',
+                    '--param POSTGRESQL_PASSWORD=sonar',
+                    '--param POSTGRESQL_DATABASE=sonar',
+                    '--param VOLUME_CAPACITY=4Gi',
+                    '--param DATABASE_SERVICE_NAME=postgresql-sonarqube',
+                    '--labels=app=sonarqube_db')
+                  
+                  openshift.newApp('./templates/sonarqube-template.yaml',
+                    "--param NAME_PREFIX=${name_prefix}",
+                    "--param APP_DOMAIN=${app_domain}")
+                }
+              }
+            }
+          
+            stage('Prepare dev application environment') {
+              sh """
+                oc process -f templates/tasks-dev-project-template.yaml \
+                  -p NAME_PREFIX=${name_prefix} \
+                  -p PROJECT_NAME=tasks-dev \
+                  -p APP_DOMAIN=${app_domain}| oc create -f -
+              """
+            }
+            
+            stage('Prepare prod application environment') {
+              sh """
+                oc process -f templates/tasks-prod-project-template.yaml \
+                  -p NAME_PREFIX=${name_prefix} \
+                  -p PROJECT_NAME=tasks-prod \
+                  -p APP_DOMAIN=${app_domain}| oc create -f -
+              """
+            }
+            
+            /*
+            stage('Create application pipeline') {
+              openshift.withCluster() {
+                openshift.withProject(jenkins_project) {
+                  sh """
+                    oc get bc | grep '^openshift-cicd-app' || oc new-app ${app_pipeline_git_repo}
+                  """
+                  //openshift.newApp(app_pipeline_git_repo)
+                }
+              }
+            }
+            */
+          }
+          
+          def delete_project(project_name) {
+            sh """
+              oc delete project $project_name || echo
+            """
+          }
+          
+          def get_pod_name(app_name) {
+            return sh (
+              script: "oc get pod | grep '^$app_name' | awk '{ print \$1 }'",
+              returnStdout: true
+            ).trim()
+          }
+          
+          def wait_for_pod(app_name) {
+            timeout(5) {
+              sh """
+                while true; do
+                  PODS_COUNT=\$(oc get rc | grep "^$app_name" | awk '{ print \$4 }')
+                  [ "\$PODS_COUNT" -ge 1 ] && break
+                  sleep 10
+                done
+              """
+            }
+          }
+
+  type: JenkinsPipeline
+parameters:
+- name: NAME_PREFIX
+  value: cicd
+- name: PROJECT_NAME
+  value: jenkins
