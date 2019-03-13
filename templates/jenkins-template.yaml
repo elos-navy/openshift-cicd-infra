@@ -278,7 +278,7 @@ objects:
           
             stage('Prepare dev application environment') {
               sh """
-                oc process -f templates/tasks-app-environment-template.yaml \
+                oc process -f templates/tasks-dev-project-template.yaml \
                   -p NAME_PREFIX=${name_prefix} \
                   -p PROJECT_NAME=tasks-dev \
                   -p APP_DOMAIN=${app_domain}| oc create -f -
@@ -287,7 +287,7 @@ objects:
             
             stage('Prepare prod application environment') {
               sh """
-                oc process -f templates/tasks-app-environment-template.yaml \
+                oc process -f templates/tasks-prod-project-template.yaml \
                   -p NAME_PREFIX=${name_prefix} \
                   -p PROJECT_NAME=tasks-prod \
                   -p APP_DOMAIN=${app_domain}| oc create -f -
@@ -537,7 +537,6 @@ objects:
           }
 
   type: JenkinsPipeline
-
 parameters:
 - name: NAME_PREFIX
   value: cicd
