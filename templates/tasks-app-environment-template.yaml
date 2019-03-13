@@ -91,9 +91,24 @@ objects:
   subjects:
   - kind: ServiceAccount
     name: jenkins
-    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+    namespace: ${NAME_PREFIX}-jenkins
   userNames:
   - system:serviceaccount:${NAME_PREFIX}-jenkins:jenkins
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: edit-jenkins-default
+    namespace: ${NAME_PREFIX}-${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: ${NAME_PREFIX}-jenkins
+  userNames:
+  - system:serviceaccount:${NAME_PREFIX}-jenkins:default
 - apiVersion: v1
   kind: ImageStream
   metadata:
