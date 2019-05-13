@@ -164,7 +164,7 @@ objects:
   metadata:
     labels:
       app: jenkins-ephemeral
-    name: jenkins
+    name: ${NAME_PREFIX}-jenkins
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
     host: ${NAME_PREFIX}-jenkins.${APP_DOMAIN}
