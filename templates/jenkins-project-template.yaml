@@ -167,7 +167,6 @@ objects:
     name: ${NAME_PREFIX}-jenkins
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
-    host: ${NAME_PREFIX}-jenkins.${APP_DOMAIN}
     tls:
       insecureEdgeTerminationPolicy: Redirect
       termination: edge
