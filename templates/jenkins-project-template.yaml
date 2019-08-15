@@ -92,6 +92,18 @@ objects:
   userNames:
   - system:serviceaccount:${NAME_PREFIX}-jenkins:jenkins
 - apiVersion: v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: jenkins-system-admin
+  roleRef:
+    name: system-admin
+  subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: ${NAME_PREFIX}-jenkins
+  userNames:
+  - system:serviceaccount:${NAME_PREFIX}-jenkins:jenkins
+- apiVersion: v1
   kind: ImageStream
   metadata:
     labels:
