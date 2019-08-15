@@ -177,7 +177,7 @@ if [ ! -z "$NEW_ADMIN_PASSWORD" ]; then
   exit 0
 fi
 
-#create_docker_repo docker 5000
+create_docker_repo docker 5000
 create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
 create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
 create_npm_proxy npm https://registry.npmjs.org/
