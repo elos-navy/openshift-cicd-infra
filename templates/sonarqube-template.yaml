@@ -51,7 +51,6 @@ objects:
       app: sonarqube
     name: sonarqube
   spec:
-    host: ${NAME_PREFIX}-sonarqube.${APP_DOMAIN}
     port:
       targetPort: 9000-tcp
     to:
