@@ -25,7 +25,7 @@ objects:
           def source_git_repo       = 'https://github.com/elos-tech/openshift-cicd-infra.git'
           def app_pipeline_git_repo = 'https://github.com/elos-tech/openshift-cicd-app.git'
           def name_prefix        = 'cicd'
-          def app_domain         = 'apps.oslab.elostech.cz'
+          def app_domain         = ''
           def jenkins_project    = "${name_prefix}-jenkins"
           def components_project = "${name_prefix}-components"
           def app_project_dev    = "${name_prefix}-tasks-dev"
