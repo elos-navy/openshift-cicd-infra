@@ -39,7 +39,7 @@ objects:
             }
             
             stage('Checkout Source') {
-              git source_git_repo
+              git branch: 'minishift-branch', url: 'https://github.com/elos-tech/openshift-cicd-infra.git'
             }
           
             stage('Create Components Prerequisites') {
