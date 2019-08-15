@@ -38,7 +38,7 @@ objects:
               containerTemplate(
                 name: "jnlp",
                 workingDir: '/tmp',
-                image: "docker-registry.default.svc.cluster.local:5000/${name_prefix}-jenkins/jenkins-agent-appdev"
+                image: "172.30.1.1:5000/${name_prefix}-jenkins/jenkins-agent-appdev"
               )
             ]
           ) {
@@ -93,7 +93,7 @@ objects:
               stage('Publish to Nexus') {
                 echo "Publish to Nexus"
               
-                sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3.${components_project}.svc:8081/repository/releases"
+                sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://admin:admin123@nexus3.${components_project}.svc:8081/repository/releases"
               }
             
               // Build the OpenShift Image in OpenShift and tag it.
@@ -111,7 +111,7 @@ objects:
               stage('Copy Image to Nexus Docker Registry') {
                 echo "Copy image to Nexus Docker Registry"
             
-                sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${app_project_dev}/tasks:${devTag} docker://nexus-registry.${components_project}.svc.cluster.local:5000/tasks:${devTag}"
+                sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://172.30.1.1:5000/${app_project_dev}/tasks:${devTag} docker://nexus-registry.${components_project}.svc.cluster.local:5000/tasks:${devTag}"
               
                 openshiftTag alias: 'false', destStream: 'tasks', destTag: prodTag, destinationNamespace: "$app_project_dev", namespace: "$app_project_dev", srcStream: 'tasks', srcTag: devTag, verbose: 'false'
               }
@@ -120,7 +120,7 @@ objects:
               stage('Deploy to Dev') {
                 echo "Deploying container image to Development Project"
                 // Update the Image on the Development Deployment Config
-                sh "oc set image dc/tasks tasks=docker-registry.default.svc:5000/${app_project_dev}/tasks:${devTag} -n ${app_project_dev}"
+                sh "oc set image dc/tasks tasks=172.30.1.1:5000/${app_project_dev}/tasks:${devTag} -n ${app_project_dev}"
             
                 // Update the Config Map which contains the users for the Tasks application
                 sh "oc delete configmap tasks-config -n $app_project_dev --ignore-not-found=true"
@@ -168,7 +168,7 @@ objects:
                 echo "Destination Application: " + destApp
               
                 // Update the Image on the Production Deployment Config
-                sh "oc set image dc/${destApp} ${destApp}=docker-registry.default.svc:5000/${app_project_dev}/tasks:${prodTag} -n ${app_project_prod}"
+                sh "oc set image dc/${destApp} ${destApp}=172.30.1.1:5000/${app_project_dev}/tasks:${prodTag} -n ${app_project_prod}"
               
                 // Update the Config Map which contains the users for the Tasks application
                 sh "oc delete configmap ${destApp}-config -n ${app_project_prod} --ignore-not-found=true"
