@@ -98,7 +98,11 @@ objects:
                   
                   def nexus_pod_name = get_pod_name('nexus')
                   sh "oc rsync artefacts ${nexus_pod_name}:/tmp/"
-                  sh "oc exec ${nexus_pod_name} -- /tmp/artefacts/setup_nexus3.sh admin admin123 http://localhost:8081"
+                  def nexus_admin_pass = sh (script: "oc --namespace ${components_project} exec ${nexus_pod_name} -- /usr/bin/cat /nexus-data/admin.password", returnStdout: true ).trim()
+                  // change nexus admin password
+                  sh "oc exec ${nexus_pod_name} -- /tmp/artefacts/initialize_nexus_repos.sh --user admin --password ${nexus_admin_pass} --new_admin_password admin123 --url http://localhost:8081"
+                  // init repos
+                  sh "oc exec ${nexus_pod_name} -- /tmp/artefacts/initialize_nexus_repos.sh --user admin --password admin123 --url http://localhost:8081"
                 }
               }
             }
