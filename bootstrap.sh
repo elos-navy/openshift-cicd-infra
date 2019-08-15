@@ -4,6 +4,7 @@
 
 oc process -f templates/jenkins-project-template.yaml | oc create -f -
 oc project cicd-jenkins
+oc create -f https://raw.githubusercontent.com/openshift/origin/master/examples/jenkins/jenkins-persistent-template.json
 
 oc new-app \
   --template=jenkins-persistent \
