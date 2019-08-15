@@ -329,7 +329,6 @@ objects:
     name: tasks
     namespace: ${NAME_PREFIX}-${PROJECT_NAME}
   spec:
-    host: ${NAME_PREFIX}-${PROJECT_NAME}.${APP_DOMAIN}
     port:
       targetPort: 8080
     to:
