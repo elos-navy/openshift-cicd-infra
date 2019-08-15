@@ -67,7 +67,6 @@ objects:
       app: nexus3
     name: nexus3
   spec:
-    host: ${NAME_PREFIX}-nexus3.${APP_DOMAIN}
     port:
       targetPort: 8081-tcp
     to:
@@ -82,7 +81,6 @@ objects:
       app: nexus3
     name: nexus-registry
   spec:
-    host: nexus-registry.apps.oslab.elostech.cz
     port:
       targetPort: 5000
     tls:
