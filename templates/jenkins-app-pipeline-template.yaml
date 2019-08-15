@@ -38,7 +38,7 @@ objects:
               containerTemplate(
                 name: "jnlp",
                 workingDir: '/tmp',
-                image: "docker-registry.default.svc:5000/${name_prefix}-jenkins/jenkins-agent-appdev"
+                image: "docker-registry.default.svc.cluster.local:5000/${name_prefix}-jenkins/jenkins-agent-appdev"
               )
             ]
           ) {
