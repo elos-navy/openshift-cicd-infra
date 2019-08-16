@@ -1,8 +1,9 @@
 # OpenShift CI/CD Infra
 
-## Rucny Bootstrap
+## Manual Bootstrap
 
-Po naklonovani tohoto repa je nutne mat dostupny OpenShift cluster cez prikaz `oc` s privilegiom cluster admina (vytvaranie novych cluser roli a bindings)
+clone repository
 
-Postup pre vytvorenie Jenkins PODu a spustenie pipeline je v skripte `bootstrap.sh`
+grant system-admin and cluster-admin roles to ocp admin user
 
+inspect and run bootstrap.sh (logged into okd as admin with above privileges)
